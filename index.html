@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<style>
+    *{
+    margin: 0;
+    padding: 0;
+}
+div.box{
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    background:center center url("../images/mm.jpg") no-repeat;
+    background-size: cover;
+}
+.tips{
+    position: absolute;
+    left:20px;
+    top:20px;
+    font-size: 20px;
+    line-height: 40px;
+    z-index: 2;
+}
+.tips span{
+    font-size: 30px;
+    color: #ff6600;
+    vertical-align: middle;
+}
+.container{
+    width: 100%;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+    background: rgba(255,255,255,0.5);
+}
+.container span.zm{
+    font-size: 40px;
+    display: inline-block;
+    padding: 5px 10px;
+    height: 80px;
+    line-height: 80px;
+    overflow: hidden;
+    position: absolute;
+}
+span.zm.shoot{
+    animation: shootAni 0.2s;
+}
+@keyframes shootAni {
+   0%{
+       opacity: 1;
+       transform: scale(1);
+   }
+    100%{
+        opacity: 0;
+        transform: scale(1.5);
+    }
+}
+.gameover{
+    position: absolute;
+    left: 0;
+    top:0;
+    background: rgba(0,0,0,0.5);
+    bottom:0;
+    right:0;
+    text-align: center;
+    display: none;
+}
+.over .gameover{
+    display: block;
+}
+.over .gameover h1{
+    padding-top: 40vh;
+    margin-bottom: 40px;
+}
+.over .gameover button{
+    cursor: pointer;
+    width: 100px;
+    height: 50px;
+}
+</style>
+<div id="box" class="box">
+    <div class="tips">
+        击中数量：<span id="scoreSpan" style="margin-right: 20px;">0</span>
+        失误：<span id="missSpan">0</span>
+    </div>
+    <div class="container" id="container">
+ 
+    </div>
+    <!-- 游戏结束标签 -->
+    <div class="gameover">
+        <h1>游戏结束</h1>
+        <div class="overBtn">
+            <button type="button" id="btn">重新开始</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let box = document.getElementById("box");
+    let container = document.getElementById("container");
+    let missSpan = document.getElementById("missSpan");
+    let scoreSpan = document.getElementById("scoreSpan");
+    let btn = document.getElementById("btn");
+    let numZM = 5;
+    let score = 0 ;  // 得分
+    let missScore = 0; // 失误
+    let zmStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let spCtr = 1;  // 速度控制变量
+    let spDi = 0.5;
+    let req ; // 动画id
+    let fontColorArr = ["#ba300c","#057a7d","#b724c7","#8cc111"];
+    // 创造一个字母
+    function createSpan(){
+        let span = document.createElement("span");
+        span.className = "zm";
+        // 随机生成字母
+        let zmInStr ="";  // 已有的字母
+        for(let i=0; i<=container.children.length-1; i++){
+            zmInStr += container.children[i].innerText ;
+        }
+        let zmNow = zmStr[ Math.floor( Math.random()*zmStr.length) ];
+        // 防止字母重复
+        while( zmInStr.indexOf(zmNow) >= 0){
+            zmNow = zmStr[ Math.floor( Math.random()*zmStr.length) ]
+        }
+        span.innerText = zmNow;
+        container.appendChild(span);
+        span.style.fontSize = (Math.random()*50+30)+"px";
+        span.style.color = fontColorArr[Math.floor(fontColorArr.length*Math.random())];
+        // 字母出现的位置
+        span.style.left = (80+Math.random()*(container.offsetWidth-160)) + "px";
+        span.style.top = `${60}px` ;
+        // 每个字母设置下落速度
+        span.speed = spDi+Math.random()*spCtr;
+        // 每个字母的下落距离
+        span.dis = 0;
+        //  添加动画事件
+        span.addEventListener("animationend",function () {
+            // 当 animation 动画结束后，移除该字母
+            container.removeChild(span);
+        });
+    }
+    // 移动函数
+    function move(){
+        let spans = container.children;
+        for(let i=0; i<spans.length; i++){
+            let span = spans[i];
+            // 获取每个span的速度和位置
+            let speed = Number(span.speed);
+            let dis = Number(span.dis);
+            span.style.top = `${dis+speed}px`;
+            span.dis = `${dis+speed}`;
+            // 判断字母是否在外面。
+            if( Number(span.dis) > Number(container.offsetHeight)+10){
+                container.removeChild(span);
+                createSpan();
+                missScore++;
+                missSpan.innerText = missScore;
+            }
+        }
+        //  判断游戏是否结束：失误超过10次
+        if(missScore>=10){
+            cancelAnimationFrame(req);
+            box.classList.add("over");
+            return ;
+        }
+        // 动画循环
+        req = requestAnimationFrame(move);
+    }
+ 
+    // 初始化
+    function initGame(){
+        container.innerHTML = "";
+        score = 0;
+        scoreSpan.innerText = score ;
+        missScore = 0;
+        missSpan.innerText = missScore;
+        box.classList.remove("over");
+        // 初始生成字母
+        for(let i=0; i<numZM; i++){
+            createSpan()
+        }
+        move();
+    }
+ 
+    // 添加事件
+    document.addEventListener("keyup",function (e) {
+        console.info( e.code );
+        let spans = container.getElementsByTagName("span");
+        // 判断按键
+        for(let i=0; i<spans.length ; i++){
+            // 击中了字母：按下了正确的字母键
+            if( "Key"+spans[i].innerText == e.code ){
+                spans[i].classList.add("shoot");  // 击中字母
+                spans[i].speed = 0; // 被击中的字母不再移动
+                createSpan();  // 再生成一个字母
+                // 得分
+                score++;
+                scoreSpan.innerText = score ;
+                break;
+            }
+        }
+    });
+    // 重新开始游戏：
+    btn.addEventListener("click",function(){
+        initGame()
+    });
+    // 启动游戏
+    initGame();
+</script>
